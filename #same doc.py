@@ -1,3 +1,4 @@
+# same doc
 import math
 import simpy
 import random
@@ -8,6 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 # for lognormal distribution
+
+
 class Lognormal:
     def __init__(self, mean, stdev, random_seed=None):
         self.rand = np.random.default_rng(seed=random_seed)
@@ -32,6 +35,7 @@ totalpatients = 0
 totaltime = 0
 
 # parameters
+
 
 class p:
     # interarrival time
@@ -71,6 +75,19 @@ class p:
     runs = 1
 
 
+class simpy.resources.store.Store(env, capacity=1):
+    def __init__(self):
+        self.items = 'doc'
+        self.capacity = 40
+        self.inuse = 0
+
+    def store_put(self):
+        self.inuse -= 1
+
+    def store_get(self):
+        self.inuse += 1
+
+
 # patients information
 class IncomingPatients:
     def __init__(self, p_id) -> None:
@@ -83,9 +100,11 @@ class IncomingPatients:
     def set_priority(self):
         # 1 is the highest priority while 5 is the least priority
         if self.come == 'ambulance':
-            self.priority = random.choices([1, 2, 3, 4, 5], [0.1, 0.2, 0.4, 0.285, 0.015])[0]
+            self.priority = random.choices(
+                [1, 2, 3, 4, 5], [0.1, 0.2, 0.4, 0.285, 0.015])[0]
         else:
-            self.priority = random.choices([1, 2, 3, 4, 5], [0.1, 0.2, 0.4, 0.2, 0.1])[0]
+            self.priority = random.choices(
+                [1, 2, 3, 4, 5], [0.1, 0.2, 0.4, 0.2, 0.1])[0]
 
     def set_triage_outcome(self):
         # decision tree
@@ -101,12 +120,14 @@ class HospitalAE:
         self.env = simpy.Environment()
         self.patient_counter = 0
         # urgent patients get seen by the doctors and get tested first
-        self.doc = simpy.PriorityResource(self.env, capacity=p.number_docs)
+        self.doc = simpy.resources.store.Store(
+            self.env, capacity=p.number_docs)
         self.test = simpy.PriorityResource(self.env, capacity=p.number_tests)
 
         # the rest: FIFO
         self.nurse = simpy.Resource(self.env, capacity=p.number_nurses)
-        self.doc_not_urgent = simpy.Resource(self.env, capacity=p.number_docs_not_urgent)
+        self.doc_not_urgent = simpy.Resource(
+            self.env, capacity=p.number_docs_not_urgent)
         self.med = simpy.Resource(self.env, capacity=p.number_med)
 
     def generate_patients(self):
@@ -152,12 +173,13 @@ class HospitalAE:
 
         if patient.triage_outcome == 'AE':
             doc_queue_start = self.env.now
-            with self.doc.request(priority=patient.priority) as req_doc:
+            with simpy.resources.store.StoreGet(self.doc) as req_doc:
                 yield req_doc
                 doc_queue_end = self.env.now
                 p.wait_doc.append(doc_queue_end - doc_queue_start)
                 # sample consult time from lognormal
-                lognorm = Lognormal(mean=p.mean_doc_consult,stdev=p.stdev_doc_consult)
+                lognorm = Lognormal(mean=p.mean_doc_consult,
+                                    stdev=p.stdev_doc_consult)
                 sampled_consult_duration = lognorm.sample()
 
                 yield self.env.timeout(sampled_consult_duration)
@@ -193,7 +215,8 @@ class HospitalAE:
                 # 20% of patients needs to be hospitalised hence wait for an impatient bed
                 ip_prob = random.uniform(0, 1)
                 if ip_prob < 0.2:
-                    sampled_ip_duration = random.expovariate(1.0 / p.mean_ip_wait)
+                    sampled_ip_duration = random.expovariate(
+                        1.0 / p.mean_ip_wait)
                     yield self.env.timeout(sampled_ip_duration)
 
             # 90% of patients need medications
@@ -246,7 +269,8 @@ class HospitalAE:
                 with self.doc_not_urgent.request() as req_doc_not_urgent:
                     yield req_doc_not_urgent
                     test_doc_queue_end = self.env.now
-                    p.wait_test_doc.append(test_doc_queue_end - test_doc_queue_start)
+                    p.wait_test_doc.append(
+                        test_doc_queue_end - test_doc_queue_start)
                     # sample consult time from lognormal
                     lognorm = Lognormal(
                         mean=p.mean_doc_consult, stdev=p.stdev_doc_consult)
@@ -301,22 +325,6 @@ for run in range(p.runs):
     # print(p.interarrival)
 print(totaltime/totalpatients)
 
-# plt.plot(p.interarrival_time)
-# plt.xticks(range(0,len(p.interarrival_time)+1, 100))
-# plt.ylabel('Interarrival Times')
-# plt.xlabel('Time') 
-# plt.title("Sampled Interarrival Times") 
-# plt.show() 
-# new_list = [0] * math.ceil(max(p.interarrival_time))
 
-# for i in range(len(p.interarrival_time)):
-#     for j in range(len(new_list)):
-#         if p.interarrival_time[i] < j+1 and p.interarrival_time[i] > j:
-#             new_list[j] += 1
-
-# plt.plot(new_list)  # Plot the chart
-# plt.xticks(range(0,len(new_list)+1, 10))
-# plt.ylabel('Frequency')
-# plt.xlabel('Interarrival Time') 
-# plt.title("Exponential Distribution of Interarrival Times") 
-# plt.show() 
+# ssef forms
+# biblio
